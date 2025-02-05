@@ -1,8 +1,8 @@
 # Volatility Surface VAE
 
-This code base is used for the following paper:
+This code base is for the following paper:
 
-Chen, Jacky and Hull, John C. and Poulos, Zissis and Rasul, Haris and Veneris, Andreas and Wu, Yuntao, A Variational Autoencoder Approach to Conditional Generation of Possible Future Volatility Surfaces (November 9, 2023). Available at SSRN: https://ssrn.com/abstract=4628457 or http://dx.doi.org/10.2139/ssrn.4628457
+Jacky Chen, John Hull, Zissis Poulos, Haris Rasul, Andreas Veneris, Yuntao Wu, "*A Variational Autoencoder Approach to Conditional Generation of Possible Future Volatility Surfaces*", to appear in The Journal of Financial Data Science, 2025.
 
 We use CVAE + LSTM to generate volatility surfaces based on an arbitrary context length.
 
@@ -41,25 +41,16 @@ Other codes:
 - `datasets_randomized`: the customized dataset definitions used for `cvae_with_mem_randomized`, generates data points with variable context length. 
 - `utils`: code used for setting random seeds, training, testing and evaluation.
 
-## test_scripts
-This folder contains all the preliminary test scripts.
-
 ## Training and Surface generation
 - `param_search.py` can be used to search for optimal parameters and train the models
 - `generate_surfaces.py` can be used to generate distributions of surfaces over a time horizon
-- The files have different post fix.
-    - `arb_free`: arbitrage free surfaces
-    - `arb_free1`: specifically focused on calendar arbitrage
-    - `arb_free2`: specifically focused on butterfly arbitrage
-    - `simple`: no extra features.
+- `generate_surfaces_max_likelihood.py` can be used to generate the surfaces with maximum likelihood (encoded latent with zero for generated date)
 
 ## Table/Plot generation
 The following files contains the code for table and plot generation for the final paper:
-- `result_arbitrage.ipynb`: This file contains code for Appendix B.
-- `result_historgram_plot.ipynb`: This file contains code for plotting the in sample histogram. We check where the realized points and properties lie in the VAE distribution (Figure 1, 2 in the paper)
-- `result_iv_all.ipynb`: This file contains code for the overall regression to the realized iv surfaces for all 5x5 grid points. (Table 1, 2 in the paper)
-- `result_iv_ret.ipynb`: This file contains code for the regressions to return.
-- `latent_pca.ipynb`: This file contains code for PCA of latent variables (Figure 3 in the paper)
+- `main_analysis.py`
+
+Detailed implementations are in `analysis_code`.
 
 ## S&P 500 data:
 The S&P 500 Option price data is downloaded from WRDS Get Data. OptionMetrics/Ivy DB US/Options/Option Prices.  
@@ -79,3 +70,6 @@ Step 4:
 - Output Format: *.csv
 - Compression: *.zip
 - Date Format: YYYY-MM-DD
+
+
+Models and parsed data can be downloaded from [Google Drive](https://drive.google.com/drive/folders/1W3KsAJ0YQzK2qnk0c-OIgj26oCAO3NI1?usp=sharing)

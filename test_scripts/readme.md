@@ -1,1 +1,0 @@
-This folder contains all the initial testing code that are no longer used.

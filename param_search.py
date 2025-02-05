@@ -20,6 +20,7 @@ skew_data = data["skews"]
 slope_data = data["slopes"]
 ex_data = np.concatenate([ret_data[...,np.newaxis], skew_data[...,np.newaxis], slope_data[...,np.newaxis]], axis=-1)
 print(ex_data.shape)
+
 train_dataset = VolSurfaceDataSetRand(vol_surf_data[:4000])
 valid_dataset = VolSurfaceDataSetRand(vol_surf_data[4000:5000])
 test_dataset = VolSurfaceDataSetRand(vol_surf_data[5000:])
@@ -40,15 +41,15 @@ train_ex = DataLoader(train_dataset2, batch_sampler=train_batch_sampler2)
 valid_ex = DataLoader(valid_dataset2, batch_sampler=valid_batch_sampler2)
 test_ex = DataLoader(test_dataset2, batch_sampler=test_batch_sampler2)
 
+
 conv_param_grid = {
-    "latent_dim": [5],
-    "surface_hidden": [[5, 5, 5]],
-    "mem_hidden": [100],
-    "kl_weight": [1e-5],
-    "re_feat_weight": [0.0, 1.0],
+    "latent_dim": 5,
+    "surface_hidden": [5, 5, 5],
+    "mem_hidden": 100,
+    "kl_weight": 1e-5,
 }
 
-base_folder_name = "test_spx/2023_08_25"
+base_folder_name = "test_spx/2024_11_09"
 
 df = {
     "fn": [],
@@ -56,7 +57,6 @@ df = {
     "surface_hidden": [],
     "mem_hidden": [],
     "kl_weight": [],
-    "re_feat_weight": [],
     "dev_loss": [],
     "dev_re_surface": [],
     "dev_re_ex_feats": [],
@@ -68,27 +68,36 @@ df = {
     "test_re_loss": [],
     "test_kl_loss": [],
 }
-for i, param in enumerate(ParameterGrid(conv_param_grid)):
+
+params = [
+    {"model_name": "no_ex", "train_data": train_simple, "valid_data": valid_simple, "test_data": test_simple},
+    {"model_name": "ex_no_loss", "train_data": train_ex, "valid_data": valid_ex, "test_data": test_ex},
+    {"model_name": "ex_loss", "train_data": train_ex, "valid_data": valid_ex, "test_data": test_ex},
+]
+
+for i, param in enumerate(params):
     set_seeds(0)
-    latent_dim = param.get("latent_dim")
-    surface_hidden = param.get("surface_hidden")
-    mem_hidden = param.get("mem_hidden")
-    kl_weight = param.get("kl_weight")
-    re_feat_weight = param.get("re_feat_weight")
+    
+    model_name = param["model_name"] + ".pt"
+    train_data = param["train_data"]
+    valid_data = param["valid_data"]
+    test_data = param["test_data"]
+    print(model_name)
+
     config = {
         "feat_dim": (5, 5),
-        "latent_dim": latent_dim,
+        "latent_dim": conv_param_grid["latent_dim"],
         "device": "cuda",
-        "kl_weight": kl_weight,
-        "re_feat_weight": re_feat_weight,
-        "surface_hidden": surface_hidden,
-        "ex_feats_dim": ex_data.shape[-1],
+        "kl_weight": conv_param_grid["kl_weight"],
+        "re_feat_weight": 1.0 if param["model_name"] == "ex_loss" else 0.0,
+        "surface_hidden": conv_param_grid["surface_hidden"],
+        "ex_feats_dim": 0 if param["model_name"] == "no_ex" else ex_data.shape[-1],
         "ex_feats_hidden": None,
         "mem_type": "lstm",
-        "mem_hidden": mem_hidden,
+        "mem_hidden": conv_param_grid["mem_hidden"],
         "mem_layers": 2,
         "mem_dropout": 0.2,
-        "ctx_surface_hidden": surface_hidden,
+        "ctx_surface_hidden": conv_param_grid["surface_hidden"],
         "ctx_ex_feats_hidden": None,
         "interaction_layers": None,
         "use_dense_surface": False,
@@ -96,17 +105,16 @@ for i, param in enumerate(ParameterGrid(conv_param_grid)):
         "ex_loss_on_ret_only": True,  # assume that the ret is the first feature in the tensor
         "ex_feats_loss_type": "l2",
     }
-    model_name = f"model_{i}.pt"
+    
     model = CVAEMemRand(config)
     if not os.path.exists(f"{base_folder_name}/{model_name}"):
-        train(model, train_ex, valid_ex, epochs=num_epochs, lr=1e-05, model_dir=base_folder_name, file_name=model_name)
-    dev_losses, test_losses = test(model, valid_ex, test_ex, f"{base_folder_name}/{model_name}")
+        train(model, train_data, valid_data, epochs=num_epochs, lr=1e-05, model_dir=base_folder_name, file_name=model_name)
+    dev_losses, test_losses = test(model, valid_data, test_data, f"{base_folder_name}/{model_name}")
     df["fn"].append(model_name)
-    df["latent_dim"].append(latent_dim)
-    df["surface_hidden"].append(surface_hidden)
-    df["mem_hidden"].append(mem_hidden)
-    df["kl_weight"].append(kl_weight)
-    df["re_feat_weight"].append(re_feat_weight)
+    df["latent_dim"].append(conv_param_grid["latent_dim"])
+    df["surface_hidden"].append(conv_param_grid["surface_hidden"])
+    df["mem_hidden"].append(conv_param_grid["mem_hidden"])
+    df["kl_weight"].append(conv_param_grid["kl_weight"])
     df["dev_loss"].append(dev_losses["loss"])
     df["dev_re_surface"].append(dev_losses["re_surface"])
     df["dev_re_ex_feats"].append(dev_losses["re_ex_feats"])
@@ -119,4 +127,4 @@ for i, param in enumerate(ParameterGrid(conv_param_grid)):
     df["test_kl_loss"].append(test_losses["kl_loss"])
 
 df = pd.DataFrame(df)
-df.to_csv(f"{base_folder_name}_results.csv", index=False)
+df.to_csv(f"{base_folder_name}/results.csv", index=False)
